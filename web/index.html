@@ -1,0 +1,40 @@
+<html>
+<head>
+  <script type="text/javascript" src="http://code.jquery.com/jquery-1.11.1.min.js"> </script>
+  <script type="text/javascript" src="https://golden-layout.com/files/latest/js/goldenlayout.min.js"></script>
+  <link type="text/css" rel="stylesheet" href="https://golden-layout.com/files/latest/css/goldenlayout-base.css" />
+  <link type="text/css" rel="stylesheet" href="https://golden-layout.com/files/latest/css/goldenlayout-dark-theme.css" />
+  <script type="text/javascript" src="data.js"> </script>
+  <script type="text/javascript" src="components.js"> </script>
+  <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+  body {
+    margin: 0px
+  }
+  #container {
+    margin: 0px;
+    padding: 0px;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+  }
+  #content {
+    flex-grow: 1
+  }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <!-- <div id="header">Hello World</div> -->
+    <div id="content"></div>
+  </div>
+  <script>
+  var myLayout = new GoldenLayout( data, document.getElementById("content") );
+  for (var name in Components) {
+    myLayout.registerComponent( name, Components[name] );
+  }
+  myLayout.init();
+  </script>
+</body>
+</html>

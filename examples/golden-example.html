@@ -20,22 +20,45 @@
                 componentState: { label: 'B' }
             },{
                 type: 'component',
-                componentName: 'testComponent',
+                componentName: 'testComponent2',
                 componentState: { label: 'C' }
             }]
         }]
     }]
   };
   </script>
+  <style>
+  body {
+    margin: 0px
+  }
+  #container {
+    margin: 0px;
+    padding: 0px;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+  }
+  #content {
+    flex-grow: 1
+  }
+  </style>
 </head>
 <body>
-<script>
-var myLayout = new GoldenLayout( config );
-myLayout.registerComponent( 'testComponent', function( container, componentState ){
-  container.getElement().html( '<h2>' + componentState.label + '</h2>' );
-});
+  <div id="container">
+    <div id="header">Hello World</div>
+    <div id="content"></div>
+  </div>
+  <script>
+  var myLayout = new GoldenLayout( config, document.getElementById("content") );
+  myLayout.registerComponent( 'testComponent', function( container, componentState ){
+    container.getElement().html( '<h2>' + componentState.label + '</h2>' );
+  });
 
-myLayout.init();
-</script>
+  myLayout.registerComponent( 'testComponent2', function( container, componentState ){
+    container.getElement().html( '<h2>' + componentState.label + ' Take 2</h2>' );
+  });
+  myLayout.init();
+  </script>
 </body>
 </html>
