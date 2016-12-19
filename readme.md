@@ -20,9 +20,18 @@ Alternates
 Milestone 1:
 Ability to define a layout, kick off the server process that watches it, send widgets to it.
 
+## Ideas
+
+* Partial updates, so only the widgets that have actually changed swap themselves out
+  Rather than deep-equals, I could implement a last-updated timestamp
+
 ## Milestone 1: Notes
 
 * Scala to write out a configuration
 * Example to load it from file
 * components that understand those configs
 * Probably re-add header with some of my own controls
+
+## Milestone 2: Notes
+
+* Websockets in scala spray? Have we solved that one? Check out how

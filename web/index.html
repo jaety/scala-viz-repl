@@ -4,7 +4,6 @@
   <script type="text/javascript" src="https://golden-layout.com/files/latest/js/goldenlayout.min.js"></script>
   <link type="text/css" rel="stylesheet" href="https://golden-layout.com/files/latest/css/goldenlayout-base.css" />
   <link type="text/css" rel="stylesheet" href="https://golden-layout.com/files/latest/css/goldenlayout-dark-theme.css" />
-  <script type="text/javascript" src="data.js"> </script>
   <script type="text/javascript" src="components.js"> </script>
   <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
@@ -30,11 +29,15 @@
     <div id="content"></div>
   </div>
   <script>
-  var myLayout = new GoldenLayout( data, document.getElementById("content") );
-  for (var name in Components) {
-    myLayout.registerComponent( name, Components[name] );
-  }
-  myLayout.init();
+  var myLayout;
+  $.getJSON("data.json", function(data) {
+    myLayout = new GoldenLayout( data, document.getElementById("content") );
+
+    for (var name in Components) {
+      myLayout.registerComponent( name, Components[name] );
+    }
+    myLayout.init();    
+  });
   </script>
 </body>
 </html>

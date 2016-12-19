@@ -69,13 +69,13 @@ object layouts {
   }
 }
 
-object test {
-  def main(args: Array[String]) : Unit = {
-    import layouts._
-    val page = Row(Seq(
-      Text("hello world. Ha"),
-      LineChart(Seq(1.0, 2.0, 3.0), Seq(Seq(1.0, 3.0, 2.0), Seq(3.0, 1.0, 2.0)))
-    ))
-    writeDataFile(page, "web/data.js")
-  }
-}
+//object test {
+//  def main(args: Array[String]) : Unit = {
+//    import layouts._
+//    val page = Row(Seq(
+//      Text("hello world. Ha"),
+//      LineChart(Seq(1.0, 2.0, 3.0), Seq(Seq(1.0, 3.0, 2.0), Seq(3.0, 1.0, 2.0)))
+//    ))
+//    writeDataFile(page, "web/data.js")
+//  }
+//}
