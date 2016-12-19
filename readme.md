@@ -35,3 +35,8 @@ Ability to define a layout, kick off the server process that watches it, send wi
 ## Milestone 2: Notes
 
 * Websockets in scala spray? Have we solved that one? Check out how
+
+## Usability Notes
+
+To use ammonite shell as your repl for interacting with this
+    sbt scala-viz-repl/test:console
