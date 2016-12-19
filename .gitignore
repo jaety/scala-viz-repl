@@ -1,3 +1,6 @@
+/.idea/
 layout/
-project/
+/project/boot/
+/project/plugins/project
 target/
+tmp/
