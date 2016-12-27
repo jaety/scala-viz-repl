@@ -24,6 +24,9 @@ Ability to define a layout, kick off the server process that watches it, send wi
 
 * Partial updates, so only the widgets that have actually changed swap themselves out
   Rather than deep-equals, I could implement a last-updated timestamp
+* Couple difference patterns:
+    1. Story : Just keeps adding Divs
+    2. Dashboard : Layout and you get one screen
 
 ## Milestone 1: Notes
 
@@ -40,3 +43,7 @@ Ability to define a layout, kick off the server process that watches it, send wi
 
 To use ammonite shell as your repl for interacting with this
     sbt scala-viz-repl/test:console
+
+## Alternate ideas
+
+* Looking at Zeppelin. Can I get it running with a Tableness project?

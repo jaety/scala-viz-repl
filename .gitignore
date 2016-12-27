@@ -4,3 +4,4 @@ layout/
 /project/plugins/project
 target/
 tmp/
+*.swp
