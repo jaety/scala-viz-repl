@@ -26,6 +26,9 @@ object Take3 {
     def zip[C, B1 >: B](that: Op[A,C]) : Zip[A,B1,C] = Zip(this, that)
     def zip3[C1,C2, B1 >: B](that1: Op[A,C1], that2: Op[A,C2]) : Zip3[A,B1,C1,C2] = Zip3(this, that1, that2)
     def partition[A2](partFunc: A => A2) : Op[A2, Seq[(A,B)]] = Partition(this, partFunc)
+
+    // Utilities: not fundamental
+    def name = getClass.getSimpleName
   }
 
   case class Source[A,B](val domain: Seq[A])(f: A => B) extends Op[A,B] {
@@ -90,23 +93,60 @@ object Take3 {
     def expr: Op[A,B]
     lazy val domain: Seq[A] = expr.domain
     lazy val toPF : PartialFunction[A,B] = expr.toPF
+    override def toString = expr.toString
   }
 
   def func[A,B](sources: Op[_,_]*)(op: Op[A,B]) = new Func[A,B](sources:_*) {
     lazy val expr = op
   }
-  def add[T](m1: Op[T,Double], m2: Op[T,Double]) = func(m1,m2) {
+  def func[A,B](nme: String, sources: Op[_,_]*)(op: Op[A,B]) = new Func[A,B](sources:_*) {
+    lazy val expr = op
+    override def name = nme
+  }
+
+  def prettyPrint(root: Op[_,_], depth: Int=0) {
+    val indent = "  "*depth
+    println(s"$indent${root.name} ${root.domain}")
+    for { src <- root.sources } { prettyPrint(src, depth+1) }
+  }
+
+  // ---------------------------
+  // Examples
+  // ---------------------------
+
+  def add[T](m1: Op[T,Double], m2: Op[T,Double]) = func("add", m1,m2) {
     m1 zip m2 and (_ + _)
   }
 
+  def dist[T](m1: Op[T,Seq[Double]]) = func(m1) {
+    val items = for {a <- m1.domain; b <- m1.domain} yield (a,b)
+    Source(items)(pair => {
+      // TODO: Bring in basic operations
+      Math.sqrt((for { (a,b) <- m1(pair._1) zip m1(pair._2)} yield { Math.pow(a-b, 2) }).sum)
+    })
+  }
+
+  val Rand = scala.util.Random
+  def randSeqs : Source[Char, Seq[Double]] = Source('a' to 'z')(_ => 1 to 100 map (_ => Rand.nextDouble))
 
   def main(args: Array[String]): Unit = {
-    val a = Source(1 to 10)(_ => 1.0)
-    val b = Source(11 to 20)(_ => 2.0)
+    val a = {
+      // println(NameFromInvocation.ha)
+      Source(1 to 10)(_ => 1.0)
+    }
+    val b = Source(11 to 20)(_ => 3.0)
     val c = a orElse b
-    val d = add(a,a)
+    val d = add(a,a) orElse c
+
     // val c = add(a, b)
-    println(d.domain.map(d.toPF))
+    // println(d.domain.map(d.toPF))
+
+    val src = randSeqs
+    val dists= dist(src)
+//    for { (a,b) <- dists.domain } {
+//      println(a,b,dists((a,b)))
+//    }
+    prettyPrint(d)
   }
 }
 
