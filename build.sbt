@@ -8,7 +8,7 @@ scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
 run <<= run in Compile in core
 
-
+runMain <<= runMain in Compile in core
 
 
 initialCommands in (Test, console) := """ammonite.Main().run()"""
