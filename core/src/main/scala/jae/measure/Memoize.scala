@@ -25,6 +25,12 @@ class MemoizePF[-T, +R](f: PartialFunction[T,R]) extends PartialFunction[T,R] {
         b
     }
   }
+
+  def reset() : Unit = {
+    vals.clear()
+    valid.clear()
+  }
+  def stashCount : Int = vals.size
 }
 
 object Memoize {
