@@ -3,7 +3,7 @@ package jae.measure
 import java.io.File
 
 import com.github.tototoshi.csv.CSVReader
-import jae.data.CountrySource
+import jae.data.CountrySources
 import plotly._, element._, layout._
 import plotly.Plotly._
 
@@ -25,7 +25,7 @@ object DataWrangling {
   /**
     * http://databank.worldbank.org/data/reports.aspx?source=2&series=SP.POP.TOTL&country=#
     * http://api.worldbank.org/countries/all/indicators/SP.POP.TOTL?per_page=1000&page=1
- *
+    *
     * @return
     */
   def loadPopulationData = {
@@ -56,7 +56,7 @@ object DataWrangling {
   def main(args: Array[String]): Unit = {
     val x = loadPopulationData
     val y = x.collect(_.country)
-    println(CountrySource.countries.mkString("\n"))
+    println(CountrySources.WorldBank.countries.mkString("\n"))
 //    plot(y)
   }
 }
