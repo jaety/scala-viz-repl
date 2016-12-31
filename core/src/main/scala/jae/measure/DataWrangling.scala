@@ -3,20 +3,14 @@ package jae.measure
 import java.io.File
 
 import com.github.tototoshi.csv.CSVReader
-import jae.data.CountrySources
+import jae.data.{WorldBank, CountrySources}
+import jae.domain.{Year, Wrapped, Country}
 import plotly._, element._, layout._
 import plotly.Plotly._
 
 /**
   * Created by jaety on 12/29/16.
   */
-trait Wrapped extends Any {
-  def id : Any
-  override def toString = id.toString
-}
-
-case class Year(val id: Int) extends AnyVal with Wrapped
-case class Country(val id: String) extends AnyVal with Wrapped
 case class PopItem(year: Year, country: Country)
 
 object DataWrangling {
@@ -53,10 +47,16 @@ object DataWrangling {
     traces.plot()
   }
 
+  def plotOne[T](op: Op[T,Double]) = {
+    val trace = Scatter(op.domain.map(_.toString), op.domain.map(op.toPF))
+    Seq(trace).plot()
+  }
+
   def main(args: Array[String]): Unit = {
     val x = loadPopulationData
     val y = x.collect(_.country)
-    println(CountrySources.WorldBank.countries.mkString("\n"))
-//    plot(y)
+    // println(CountrySources.WorldBank.countries.mkString("\n"))
+    val usaPop = WorldBank.populationTotals(Country("USA"))
+    plotOne(usaPop)
   }
 }

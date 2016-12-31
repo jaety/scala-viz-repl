@@ -55,6 +55,7 @@ object Source {
     val items = for {a <- domainA; b <- domainB} yield (a,b)
     Source(items)(f.tupled)
   }
+  def fromList[A,B](items: Seq[(A,B)]) : Source[A,B] = Source(items.map(_._1))(items.toMap)
 }
 
 case class OrElse[A,B](f1: Op[A,B], f2: Op[A,B]) extends Op[A,B] {
