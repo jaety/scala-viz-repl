@@ -47,16 +47,23 @@ object DataWrangling {
     traces.plot()
   }
 
-  def plotOne[T](op: Op[T,Double]) = {
-    val trace = Scatter(op.domain.map(_.toString), op.domain.map(op.toPF))
-    Seq(trace).plot()
+  def asTrace[T](op: Op[T,Double], name: String = null) = {
+    Scatter(op.domain.map(_.toString), op.domain.map(op.toPF), name=name)
   }
 
+  def changes(op: Op[Year,Double]) : Op[Year,Double] = {
+    op mapItems((year,value) => value - op.toPF.applyOrElse(Year(year.id - 1), (_:Year) => Double.NaN))
+  }
+    //func("changes", op)(op.domain.sliding(2).map(t => op(t(1)) - op(t(0))))
+
   def main(args: Array[String]): Unit = {
-    val x = loadPopulationData
-    val y = x.collect(_.country)
-    // println(CountrySources.WorldBank.countries.mkString("\n"))
-    val usaPop = WorldBank.populationTotals(Country("USA"))
-    plotOne(usaPop)
+    import Macros.{name => $}
+
+    val population = JoinAll(Seq("USA","JPN","CHN").map(Country).map(WorldBank.populationTotals))
+    val chg = population andThen (changes)
+    prettyPrint(chg)
+    // val traces = $(all mapItems ((country, values) => asTrace(values, country.toString)))
+    // prettyPrint(traces)
+    // traces.values.plot()
   }
 }

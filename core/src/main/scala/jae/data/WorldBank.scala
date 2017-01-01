@@ -26,9 +26,9 @@ object WorldBank {
     else retrieve(source, page=page+1)
   }
 
-  def indicator(country: Country, indicator: String) : Source[Year, Double] = {
+  def indicator(country: Country, indicator: String) : Source[Country, Source[Year, Double]] = {
     val url = s"http://api.worldbank.org/countries/$country/indicators/$indicator?per_page=1000"
-    Source.fromList(retrieve(url).flatMap(page => {
+    val src = Source.fromList(retrieve(url).flatMap(page => {
       val content = parse(page)(1)
       for { item <- content.children } yield {
         // item.extract[ValueDatePair]
@@ -40,7 +40,8 @@ object WorldBank {
         Year((item \ "date").extract[String].toInt) -> value
       }
     }).sortBy(_._1))
+    Source.fromList(Seq(country -> src), Some(s"WorldBank $indicator"))
   }
 
-  def populationTotals(country: Country) = indicator(country, "SP.POP.TOTL")
+  def populationTotals(country: Country) : Source[Country, Source[Year, Double]] = indicator(country, "SP.POP.TOTL")
 }

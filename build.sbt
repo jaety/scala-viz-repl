@@ -3,7 +3,7 @@ name := "scala-viz-repl"
 lazy val commonSettings = Seq(
   version := "1.0",
   scalaVersion := "2.11.8",
-  scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
+  scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8", "-Yrangepos")
 )
 
 run <<= run in Compile in core
