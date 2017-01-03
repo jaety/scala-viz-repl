@@ -33,10 +33,10 @@ package object measure {
     def <=(b: Double) : Op[T,Boolean] = a <= a.fill(b)
   }
 
-  def func[A,B](sources: Op[_,_]*)(op: Op[A,B]) = new Func[A, B](sources: _*) {
+  def func[A,B](sources: Op[_,_]*)(op: Op[A,B])(implicit rangeTag: TypeTag[B]) = new Func[A, B](sources: _*) {
     lazy val expr = op
   }
-  def func[A,B](nme: String, sources: Op[_,_]*)(op: Op[A,B]) = new Func[A,B](sources:_*) {
+  def func[A,B](nme: String, sources: Op[_,_]*)(op: Op[A,B])(implicit rangeTag: TypeTag[B]) = new Func[A,B](sources:_*) {
     lazy val expr = op
     override def name = Some(nme)
   }
@@ -46,7 +46,7 @@ package object measure {
   def prettyPrint(root: Op[_,_], depth: Int=0) {
     val indent = "  "*depth
     root match {
-      case m: Named => print(root.name)
+//      case m: Named[_,_] => print(m.realName)
       case _ => println(s"$indent${root.toString}")
     }
     for { src <- root.sources } { prettyPrint(src, depth+1) }

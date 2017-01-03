@@ -29,26 +29,26 @@ trait Op[A, B] extends Measure[A, B] {
   def sources: Seq[Op[_, _]]
 
   def orElse(that: Op[A, B])(implicit r: TypeTag[B]) : OrElse[A,B] = OrElse(this, that)
-  def andThen[C](f: B => C) : Op[A,C] = AndThen(this, f)
-  def mapItems[C](f: (A,B) => C) : MapItems[A,B,C] = { MapItems(this, f) }
-  def zip[C](that: Op[A,C]) : Zip[A,B,C] = Zip(this, that)
-  def zip3[C1,C2](that1: Op[A,C1], that2: Op[A,C2]) : Zip3[A,B,C1,C2] = Zip3(this, that1, that2)
-  def collectItems[A2](collector: A => A2) : Op[A2, Seq[(A,B)]] = Collect(this, collector)
-  def collect[A2](collector: A => A2) : Op[A2, Seq[B]] = this collectItems collector andThen (items => items.map(_._2))
-  def fillFrom[A2,B2](op: Op[A2,B2])(f: A => A2) : Op[A,B2] = FillFrom(this, op, f)
-  def fill[C](c:C) : Op[A,C] = func(c.toString)(this andThen (_ => c))
+  def andThen[C](f: B => C)(implicit r: TypeTag[C])  : Op[A,C] = AndThen(this, f)
+  def mapItems[C](f: (A,B) => C)(implicit r: TypeTag[C])  : MapItems[A,C,B] = { MapItems(this, f) }
+  def zip[C](that: Op[A,C])(implicit rB: TypeTag[B], rC: TypeTag[C])  : Zip[A,B,C] = Zip(this, that)
+  def zip3[C1,C2](that1: Op[A,C1], that2: Op[A,C2])(implicit rB: TypeTag[B], rC: TypeTag[C1], rC2: TypeTag[C2]) : Zip3[A,B,C1,C2] = Zip3(this, that1, that2)
+  def collectItems[A2](collector: A => A2)(implicit ta: TypeTag[A], tb: TypeTag[B]) : Op[A2, Seq[(A,B)]] = Collect(this, collector)
+  def collect[A2](collector: A => A2)(implicit ta: TypeTag[A], tb: TypeTag[B]) : Op[A2, Seq[B]] = this collectItems collector andThen (items => items.map(_._2))
+  def fillFrom[A2,B2](op: Op[A2,B2])(f: A => A2)(implicit t: TypeTag[B2]) : Op[A,B2] = FillFrom(this, op, f)
+  def fill[C](c:C)(implicit r: TypeTag[C]) : Op[A,C] = func(c.toString)(this andThen (_ => c))
 
-  def onto[A2](domain: Seq[A2])(spreader: A2 => A) : Op[A2, B] = Onto(this, domain, spreader)
-  def onto[A2](that: Op[A2,_])(spreader: A2 => A) : Op[A2, B] = Onto(this, that.domain, spreader)
+  def onto[A2](domain: Seq[A2])(spreader: A2 => A)(implicit t: TypeTag[B], ta2: TypeTag[A2]) : Op[A2, B] = Onto(this, domain, spreader)
+  def onto[A2](that: Op[A2,_])(spreader: A2 => A)(implicit t: TypeTag[B], ta2: TypeTag[A2]) : Op[A2, B] = Onto(this, that.domain, spreader)
 
   // Utilities: not fundamental
   def tpe = getClass.getSimpleName
   def name: Option[String] = None
   def values = domain.map(this.apply)
 
+  def domainDesc = if (domain.length>1) s"${domain.head}..${domain.last} [${domain.length}]" else s"${domain.head}"
   override def toString= {
     val n = name.map(_ + " ").getOrElse("")
-    val domainDesc = if (domain.length>1) s"${domain.head}..${domain.last} [${domain.length}])" else s"${domain.head}"
     s"$n$tpe($domainDesc)"
   }
 
@@ -86,7 +86,7 @@ case class OrElse[A,B](f1: Op[A,B], f2: Op[A,B], override val name: Option[Strin
   def withName(name: String) = OrElse(f1,f2,Some(name))
 }
 
-case class AndThen[A,B,C](op: Op[A,B], f: B => C) extends Op[A,C] {
+case class AndThen[A,B,C](op: Op[A,B], f: B => C)(implicit rangeTag: TypeTag[C]) extends Op[A,C] {
   override def sources: Seq[Op[_, _]] = Seq(op)
 
   override def domain: Seq[A] = op.domain
@@ -94,68 +94,74 @@ case class AndThen[A,B,C](op: Op[A,B], f: B => C) extends Op[A,C] {
   def toPF = standardPF(op.toPF andThen f)
 }
 
-case class MapItems[A,B,C](op: Op[A,B], f: (A,B) => C, override val name: Option[String] = None) extends Op[A,C] with WithName[MapItems[A,B,C]] {
+case class MapItems[A,C,B](op: Op[A,B], f: (A,B) => C, override val name: Option[String] = None)
+                          (implicit rangeTag: TypeTag[C]) extends Op[A,C] with WithName[MapItems[A,C,B]] {
   override def sources: Seq[Op[_,_]] = Seq(op)
   override def domain: Seq[A] = op.domain
   def toPF = standardPF(domain, (a:A) => f(a,op(a)))
   def withName(name: String) = { MapItems(op, f, Some(name)) }
 }
 
-case class Zip[A,B1,B2](f1: Op[A,B1], f2: Op[A,B2], override val name: Option[String] = None) extends Op[A,(B1,B2)] with WithName[Zip[A,B1,B2]] {
+case class Zip[A,B1,B2](f1: Op[A,B1], f2: Op[A,B2], override val name: Option[String] = None)
+                       (implicit rangeTag1: TypeTag[B1], rangeTag2: TypeTag[B2]) extends Op[A,(B1,B2)] with WithName[Zip[A,B1,B2]] {
   override def sources: Seq[Op[_, _]] = Seq(f1, f2)
   override def domain: Seq[A] = f1.domain intersect f2.domain
   def toPF = standardPF(domain, (a:A) => (f1(a), f2(a)))
-  def andThen[C](f: (B1,B2) => C) : Op[A,C] = this andThen f.tupled
+  def andThen[C](f: (B1,B2) => C)(implicit t: TypeTag[C]) : Op[A,C] = this andThen f.tupled
   def withName(name: String) = { Zip(f1, f2, Some(name))}
 }
-case class Zip3[A,B1,B2,B3](f1: Op[A,B1], f2: Op[A,B2], f3: Op[A,B3], override val name: Option[String] = None) extends Op[A, (B1,B2,B3)] with WithName[Zip3[A,B1,B2,B3]] {
+case class Zip3[A,B1,B2,B3](f1: Op[A,B1], f2: Op[A,B2], f3: Op[A,B3], override val name: Option[String] = None)
+                           (implicit r1: TypeTag[B1], r2: TypeTag[B2], r3: TypeTag[B3]) extends Op[A, (B1,B2,B3)] with WithName[Zip3[A,B1,B2,B3]] {
   override def sources: Seq[Op[_, _]] = Seq(f1,f2,f3)
   override def domain: Seq[A] = Seq(f1,f2,f3).map(_.domain).reduceLeft(_ intersect _)
   def toPF = standardPF(domain, (x: A) => (f1(x), f2(x), f3(x)))
-  def andThen[C](f: (B1,B2,B3) => C) : Op[A,C] = this andThen f.tupled
+  def andThen[C](f: (B1,B2,B3) => C)(implicit t: TypeTag[C]) : Op[A,C] = this andThen f.tupled
   def withName(name: String) = { Zip3(f1, f2, f3, Some(name))}
 }
 
-case class Collect[A2, A, B](op: Op[A,B], collector: A => A2, override val name: Option[String] = None) extends Op[A2, Seq[(A,B)]] with WithName[Collect[A2,A,B]]{
+case class Collect[A2, A, B](op: Op[A,B], collector: A => A2, override val name: Option[String] = None)
+                            (implicit t: TypeTag[A], t2: TypeTag[B]) extends Op[A2, Seq[(A,B)]] with WithName[Collect[A2,A,B]]{
   override def sources: Seq[Op[_, _]] = Seq(op)
-
   override def domain: Seq[A2] = op.domain.map(collector).distinct
-
   override def toPF = standardPF(domain, (x:A2) => op.domain.filter(item => collector(item) == x).map(k => (k,op(k))))
   def withName(name: String) = { Collect(op, collector, Some(name)) }
 }
 
-case class Onto[A2, A, B](op: Op[A,B], override val domain: Seq[A2], spreader: A2 => A, override val name: Option[String] = None) extends Op[A2, B] with WithName[Onto[A2,A,B]] {
+case class Onto[A2, B, A](op: Op[A,B], override val domain: Seq[A2], spreader: A2 => A, override val name: Option[String] = None)
+                         (implicit t: TypeTag[A2], t2: TypeTag[B]) extends Op[A2, B] with WithName[Onto[A2,B,A]] {
   override def sources: Seq[Op[_,_]] = Seq(op)
   override def toPF = standardPF(domain, spreader andThen op.toPF)
   def withName(name: String) = { Onto(op, domain, spreader, Some(name)) }
 }
 
-case class FillFrom[A,B,A2,B2](domainSrc: Op[A,B], valueSrc: Op[A2,B2], mapper: A => A2, override val name: Option[String] = None) extends Op[A,B2] with WithName[FillFrom[A,B,A2,B2]] {
+case class FillFrom[A,B2,A2,B](domainSrc: Op[A,B], valueSrc: Op[A2,B2], mapper: A => A2, override val name: Option[String] = None)
+                              (implicit t: TypeTag[B2]) extends Op[A,B2] with WithName[FillFrom[A,B2,A2,B]] {
   override def sources: Seq[Op[_, _]] = Seq(valueSrc)
   override def domain: Seq[A] = domainSrc.domain
   override def toPF = standardPF(domain, mapper andThen valueSrc.toPF)
   def withName(name: String) = FillFrom(domainSrc, valueSrc, mapper, Some(name))
 }
 
-case class Filter[A,B](op: Op[A,B], pred: A => Boolean, override val name: Option[String] = None) extends Op[A,B] with WithName[Filter[A,B]] {
+case class Filter[A,B](op: Op[A,B], pred: A => Boolean, override val name: Option[String] = None)
+                      (implicit t: TypeTag[B]) extends Op[A,B] with WithName[Filter[A,B]] {
   override def sources: Seq[Op[_, _]] = Seq(op)
   override def domain: Seq[A] = op.domain.filter(pred)
   override def toPF = standardPF(domain, op.toPF)
   def withName(name: String) = Filter(op, pred, Some(name))
 }
 
-abstract class Func[A,B](val sources: Op[_,_]*) extends Op[A,B] {
+abstract class Func[A,B](val sources: Op[_,_]*)(implicit rangeTag: TypeTag[B]) extends Op[A,B] {
   def expr: Op[A,B]
   lazy val domain: Seq[A] = expr.domain
   lazy val toPF = standardPF(expr.toPF)
-  override def toString = { name.getOrElse(expr.toString) }
+  override def toString = { name.map(n => s"$n $domainDesc [${rangeTag.tpe}]").getOrElse(super.toString) }
 }
 
-case class Named[A,B](op: Op[A,B], override val name: String) extends Op[A,B] {
+case class Named[A,B](op: Op[A,B], realName: String)(implicit t: TypeTag[B]) extends Op[A,B] {
   override def sources: Seq[Op[_, _]] = op.sources
   override def domain: Seq[A] = op.domain
   override def toPF: PartialFunction[A, B] = op.toPF
+  override def tpe = realName
 }
 
   // ---------------------------

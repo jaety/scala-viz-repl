@@ -40,30 +40,36 @@ object DataWrangling {
     Source(dates cross countries map PopItem.tupled)(values)
   }
 
-  def plot[T](op: Op[T,Seq[Double]]) = {
-    val traces = for { d <- op.domain } yield {
-      Scatter(op.domain.indices, op(d), name=d.toString)
-    }
-    traces.plot()
+  // TODO: Plot that respects different types of items, typetags
+//  def plot[T](op: Op[T,Seq[Double]]) = {
+//    val traces = for { d <- op.domain } yield {
+//      Scatter(op.domain.indices, op(d), name=d.toString)
+//    }
+//    traces.plot()
+//  }
+  def plot[T,K](op:Op[T,Op[K,Double]]) = {
+    val traces = op.mapItems((k,value) => asTrace(value, k.toString))
+    traces.values.plot()
   }
 
   def asTrace[T](op: Op[T,Double], name: String = null) = {
     Scatter(op.domain.map(_.toString), op.domain.map(op.toPF), name=name)
   }
 
-  def changes(op: Op[Year,Double]) : Op[Year,Double] = {
-    op mapItems((year,value) => value - op.toPF.applyOrElse(Year(year.id - 1), (_:Year) => Double.NaN))
+  def percentChanges(op: Op[Year,Double]) : Op[Year,Double] = {
+    op mapItems((year,value) => {
+      val last = op.toPF.applyOrElse(Year(year.id - 1), (_:Year) => Double.NaN)
+      (value - last) / last
+    })
   }
     //func("changes", op)(op.domain.sliding(2).map(t => op(t(1)) - op(t(0))))
 
   def main(args: Array[String]): Unit = {
     import Macros.{name => $}
 
-    val population = JoinAll(Seq("USA","JPN","CHN").map(Country).map(WorldBank.populationTotals))
-    val chg = population andThen (changes)
-    prettyPrint(chg)
-    // val traces = $(all mapItems ((country, values) => asTrace(values, country.toString)))
-    // prettyPrint(traces)
-    // traces.values.plot()
+    // TODO: Named into Macro, but will require that Names be accessible to macros
+    val population = Named(JoinAll(Seq("USA","JPN","CHN").map(Country).map(WorldBank.populationTotals)), "Population")
+    val chg = population andThen (percentChanges) andThen (_ * 100.0)
+    plot(chg)
   }
 }
