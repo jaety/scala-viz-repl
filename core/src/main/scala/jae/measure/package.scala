@@ -31,6 +31,8 @@ package object measure {
 
     def <=(b: Op[T,Double]) : Op[T,Boolean]=func("<=",a, b)(a zip b andThen (_ <= _))
     def <=(b: Double) : Op[T,Boolean] = a <= a.fill(b)
+
+    def aggregate[U](grouper: T=>U, f: Seq[Double] => Double = _.sum)(implicit r: TypeTag[T]) : Op[U,Double] = func("aggregate",a)(a groupValuesBy grouper map f)
   }
 
   def func[A,B](sources: Op[_,_]*)(op: Op[A,B])(implicit rangeTag: TypeTag[B]) = new Func[A, B](sources: _*) {

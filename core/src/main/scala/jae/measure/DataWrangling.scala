@@ -70,6 +70,6 @@ object DataWrangling {
     // TODO: Named into Macro, but will require that Names be accessible to macros
     val population = Named(JoinAll(Seq("USA","JPN","CHN").map(Country).map(WorldBank.populationTotals)), "Population")
     val chg = population andThen (percentChanges) andThen (_ * 100.0)
-    plot(chg)
+    // plot(chg)
   }
 }

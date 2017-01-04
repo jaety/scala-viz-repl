@@ -2,23 +2,6 @@ package jae.measure
 
 import scala.reflect.runtime.universe._
 
-/**
-  * Measure[A,B] encodes an enumerable PartialFunction  // TODO: Clean up the vocabulary
-  * Op[A,B] is a measure with provenance
-  * Source[A,B] : Initial production of M[A,B]
-  * OrElse[A,B] : Merging Domains of two ops
-  * AndThen[A,B,C] : Transform M[A,B] to M[A,C]
-  * ZipN[A,R1...RN]: M[A,(R1...RN)]
-  *
-  * TODO:
-  * * naming: top level expressions should, somehow, get names. Probably macro
-  * * memoization
-  *
-  * ## naming
-  *
-  *
-  *
-  **/
 trait Measure[A, +B] {
   def domain: Seq[A]
   def toPF: PartialFunction[A,B]
@@ -28,18 +11,29 @@ trait Measure[A, +B] {
 trait Op[A, B] extends Measure[A, B] {
   def sources: Seq[Op[_, _]]
 
+  // M[A,B],M[A,B] => M[A,B]
   def orElse(that: Op[A, B])(implicit r: TypeTag[B]) : OrElse[A,B] = OrElse(this, that)
-  def andThen[C](f: B => C)(implicit r: TypeTag[C])  : Op[A,C] = AndThen(this, f)
-  def mapItems[C](f: (A,B) => C)(implicit r: TypeTag[C])  : MapItems[A,C,B] = { MapItems(this, f) }
-  def zip[C](that: Op[A,C])(implicit rB: TypeTag[B], rC: TypeTag[C])  : Zip[A,B,C] = Zip(this, that)
-  def zip3[C1,C2](that1: Op[A,C1], that2: Op[A,C2])(implicit rB: TypeTag[B], rC: TypeTag[C1], rC2: TypeTag[C2]) : Zip3[A,B,C1,C2] = Zip3(this, that1, that2)
-  def collectItems[A2](collector: A => A2)(implicit ta: TypeTag[A], tb: TypeTag[B]) : Op[A2, Seq[(A,B)]] = Collect(this, collector)
-  def collect[A2](collector: A => A2)(implicit ta: TypeTag[A], tb: TypeTag[B]) : Op[A2, Seq[B]] = this collectItems collector andThen (items => items.map(_._2))
-  def fillFrom[A2,B2](op: Op[A2,B2])(f: A => A2)(implicit t: TypeTag[B2]) : Op[A,B2] = FillFrom(this, op, f)
-  def fill[C](c:C)(implicit r: TypeTag[C]) : Op[A,C] = func(c.toString)(this andThen (_ => c))
 
-  def onto[A2](domain: Seq[A2])(spreader: A2 => A)(implicit t: TypeTag[B], ta2: TypeTag[A2]) : Op[A2, B] = Onto(this, domain, spreader)
-  def onto[A2](that: Op[A2,_])(spreader: A2 => A)(implicit t: TypeTag[B], ta2: TypeTag[A2]) : Op[A2, B] = Onto(this, that.domain, spreader)
+  // M[A,B] => M[A,C]
+  def andThen[C](f: B => C)(implicit r: TypeTag[C])  : Op[A,C] = AndThen(this, f)
+  def map[C](f: B => C)(implicit r: TypeTag[C]) = andThen(f)
+  def mapItems[C](f: (A,B) => C)(implicit r: TypeTag[C])  : MapItems[A,C,B] = { MapItems(this, f) }
+  def fill[C](c:C)(implicit r: TypeTag[C]) : Op[A,C] = func(c.toString)(this andThen (_ => c))
+  def filter(f: A => Boolean)(implicit r: TypeTag[B]) : Filter[A,B] = Filter(this, f)
+  // TODO: Filter Values
+
+  // M[A,B],M[A,C] => M[A,(B,C)]
+  def zip[C](that: Op[A,C])(implicit rB: TypeTag[B], rC: TypeTag[C])  : Zip[A,B,C] = Zip(this, that)
+  // M[A,B],M[A,C],M[A,D] => M[A,(B,C,D)]
+  def zip3[C1,C2](that1: Op[A,C1], that2: Op[A,C2])(implicit rB: TypeTag[B], rC: TypeTag[C1], rC2: TypeTag[C2]) : Zip3[A,B,C1,C2] = Zip3(this, that1, that2)
+
+  // M[A,B] => M[A,Seq[(A,B)]]
+  def groupBy[A2](collector: A => A2)(implicit ta: TypeTag[A], tb: TypeTag[B]) : Op[A2, Seq[(A,B)]] = Collect(this, collector)
+  // M[A,B] => M[A,Seq[B]]
+  def groupValuesBy[A2](collector: A => A2)(implicit ta: TypeTag[A], tb: TypeTag[B]) : Op[A2, Seq[B]] = this groupBy collector andThen (items => items.map(_._2))
+
+  // M[A,B],M[C,D] => M[A,D]
+  def fillFrom[A2,B2](op: Op[A2,B2])(f: A => A2)(implicit t: TypeTag[B2]) : Op[A,B2] = FillFrom(this, op, f)
 
   // Utilities: not fundamental
   def tpe = getClass.getSimpleName
@@ -127,13 +121,6 @@ case class Collect[A2, A, B](op: Op[A,B], collector: A => A2, override val name:
   def withName(name: String) = { Collect(op, collector, Some(name)) }
 }
 
-case class Onto[A2, B, A](op: Op[A,B], override val domain: Seq[A2], spreader: A2 => A, override val name: Option[String] = None)
-                         (implicit t: TypeTag[A2], t2: TypeTag[B]) extends Op[A2, B] with WithName[Onto[A2,B,A]] {
-  override def sources: Seq[Op[_,_]] = Seq(op)
-  override def toPF = standardPF(domain, spreader andThen op.toPF)
-  def withName(name: String) = { Onto(op, domain, spreader, Some(name)) }
-}
-
 case class FillFrom[A,B2,A2,B](domainSrc: Op[A,B], valueSrc: Op[A2,B2], mapper: A => A2, override val name: Option[String] = None)
                               (implicit t: TypeTag[B2]) extends Op[A,B2] with WithName[FillFrom[A,B2,A2,B]] {
   override def sources: Seq[Op[_, _]] = Seq(valueSrc)
@@ -173,9 +160,9 @@ case class Named[A,B](op: Op[A,B], realName: String)(implicit t: TypeTag[B]) ext
   class MyLogic {
     val a = Source(1 to 20)(_ => 1.0)
     val b = Source(1 to 10, 'a' to 'c')((_,_) => 2.0)
-    val a2= a.onto(b) (_._1)
-    val b2= b.onto(a) ((_, 'a'))
-    val b3= b collect (_._1) andThen (_.sum)
+    val a2= b.fillFrom(a)(_._1) // a.onto(b) (_._1)
+    val b2= a.fillFrom(b) ((_, 'a'))
+    val b3= b.aggregate(_._1, _.sum)
 
     val c = a + b3
     val d = a + b2 + b3
@@ -203,9 +190,10 @@ object Take3 {
     val b = $(Source(11 to 20)(_ => 3.0))
     val c = $(a orElse b)
     val d = $( (a + a * 2.0) orElse c)
-    prettyPrint(d)
+    // prettyPrint(d)
 
-//    val logic = new MyLogic
+    val logic = new MyLogic
+    prettyPrint(logic.d)
     // val c = add(a, b)
 //    println(d.domain.map(x => (x, d.toPF(x))))
 //    println(d.toPF.stashCount)
