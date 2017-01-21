@@ -3,7 +3,9 @@ name := "scala-viz-repl"
 lazy val commonSettings = Seq(
   version := "1.0",
   scalaVersion := "2.11.8",
-  scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8", "-Yrangepos")
+  scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8", "-Yrangepos"),
+  organization := "com.jaety",
+  version := "0.1-SNAPSHOT"
 )
 
 run <<= run in Compile in core
@@ -13,7 +15,8 @@ runMain <<= runMain in Compile in core
 initialCommands in (Test, console) := """ammonite.Main().run()"""
 
 lazy val macros = (project in file("macro")).settings(
-  libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
+  libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+  name := "scala-viz-repl-macros"
 ).settings(commonSettings: _*)
 
 lazy val core = (project in file("core")).dependsOn(macros).settings(
@@ -35,7 +38,8 @@ lazy val core = (project in file("core")).dependsOn(macros).settings(
       "org.plotly-scala" %% "plotly-render" % "0.3.0",
       "org.json4s" %% "json4s-native" % "3.5.0"
     )
-  }
+  },
+  name := "scala-viz-repl"
 )
 
 Revolver.settings
